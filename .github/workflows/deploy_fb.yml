@@ -38,20 +38,26 @@ jobs:
       # GCFを呼び出し、HTMLを取得してファイルに保存するスクリプトを実行
       # このステップで使用するPythonスクリプトは別途作成します
       - name: Fetch HTML from GCF and save
-        run: python fetch_and_save_html.py
+        run: python .github/workflows/fetch_and_save_html.py
 
       # Firebase CLIをセットアップ（pocket-apps/action-setup-firebaseを使用）
+      # FirebaseプロジェクトIDとCIトークンが必要です
       - name: Setup Firebase CLI using Token
         uses: pocket-apps/action-setup-firebase@v2
         with:
           # GitHub Secretsに保存したFirebase CIトークンを指定
           # 事前にGitHubリポジトリの設定でSecretsに FIREBASE_CI_TOKEN という名前で登録してください
           firebase-token: ${{ secrets.FIREBASE_CI_TOKEN }}
+          # プロジェクトIDもここで指定（デプロイコマンドでも使用）
+          projectID: sample-d6924 # ここは既に設定済みかと思います
 
       # Firebase Hostingにデプロイ
       # publicディレクトリ内のファイルがデプロイされます
       - name: Deploy to Firebase Hosting
-        run: firebase deploy --only hosting
+        # firebase deploy コマンドに --project オプションを追加してプロジェクトIDを明示的に指定
+        run: firebase deploy --only hosting --project sample-d6924
+        # もしプロジェクトIDをSecretsに登録している場合は、以下のように記述することも可能
+        # run: firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
         # デプロイ対象のディレクトリを指定する必要がある場合 (デフォルトはpublic)
-        # run: firebase deploy --only hosting --public=./path/to/your/public/directory
+        # run: firebase deploy --only hosting --project YOUR_FIREBASE_PROJECT_ID --public=./path/to/your/public/directory
 
