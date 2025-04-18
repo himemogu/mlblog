@@ -1,0 +1,60 @@
+# ワークフローの名前
+name: Deploy HTML from GCF to Firebase Hosting
+
+# ワークフローをトリガーするイベントを設定
+on:
+  # スケジュール実行を設定 (例: 毎日 午前0時 UTC に実行)
+  # cron形式で指定します。詳細はこちらを参照: https://crontab.guru/
+  schedule:
+    - cron: '0 0 * * *'
+  # 手動実行も可能にする場合
+  workflow_dispatch:
+
+# ワークフローで実行するジョブを定義
+jobs:
+  deploy:
+    # ジョブを実行する環境
+    runs-on: ubuntu-latest
+
+    # ジョブのステップ
+    steps:
+      # リポジトリをチェックアウト
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Pythonをセットアップ
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x' # 使用するPythonのバージョンを指定
+
+      # 必要なPythonライブラリをインストール
+      # GCFを呼び出すためのrequestsライブラリが必要です
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      # GCFを呼び出し、HTMLを取得してファイルに保存するスクリプトを実行
+      # このステップで使用するPythonスクリプトは別途作成します
+      - name: Fetch HTML from GCF and save
+        run: python fetch_and_save_html.py
+
+      # Firebase CLIをセットアップ
+      # FirebaseプロジェクトIDとサービスアカウントキーが必要です
+      - name: Setup Firebase CLI
+        uses: firebase/setup-firebase-cli@v2
+        with:
+          # FirebaseプロジェクトIDを指定
+          projectID: YOUR_FIREBASE_PROJECT_ID
+          # GitHub Secretsに保存したFirebaseサービスアカウントキーを指定
+          # 事前にGitHubリポジトリの設定でSecretsに FIREBASE_SERVICE_ACCOUNT_KEY という名前で登録してください
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+
+      # Firebase Hostingにデプロイ
+      # publicディレクトリ内のファイルがデプロイされます
+      - name: Deploy to Firebase Hosting
+        run: firebase deploy --only hosting
+        # デプロイ対象のディレクトリを指定する必要がある場合 (デフォルトはpublic)
+        # run: firebase deploy --only hosting --public=./path/to/your/public/directory
+
