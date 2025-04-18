@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UFOシューター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        /* カスタムスタイル */
+        body {
+            font-family: 'Inter', sans-serif; /* フォント設定 */
+            overscroll-behavior: none; /* スクロール連鎖を防止 */
+        }
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            width: 400px; /* モニターの幅 */
+            height: 400px; /* モニターの高さ */
+            border: 2px solid #666;
+            background-color: #111; /* 背景色 */
+            border-radius: 8px; /* 角丸 */
+        }
+        .monitor-cell {
+            border: 1px solid #444; /* セルの境界線 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem; /* UFOの文字サイズ */
+            transition: background-color 0.2s ease; /* 背景色の遷移 */
+            position: relative; /* 照準用 */
+            /* テキスト選択不可に */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        .center-cell {
+            /* 中央のセルを強調表示 (照準) */
+            outline: 2px solid red;
+            outline-offset: -2px;
+            z-index: 10; /* 他の要素より手前に */
+        }
+        .ufo-legend img {
+            width: 30px;
+            height: 30px;
+            margin-right: 8px;
+        }
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8); /* 半透明度を少し上げる */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+            font-size: 1.5rem; /* 少し小さくして内訳表示スペース確保 */
+            z-index: 50; /* 最前面に表示 */
+        }
+        /* ワールドの明るさ表現 (例) */
+        .brightness-10 { background-color: #2a2a2a; }
+        .brightness-9 { background-color: #3a3a3a; }
+        .brightness-8 { background-color: #4a4a4a; }
+        .brightness-7 { background-color: #5a5a5a; }
+        .brightness-6 { background-color: #6a6a6a; }
+        .brightness-5 { background-color: #7a7a7a; } /* 中心に近い */
+        .brightness-4 { background-color: #8a8a8a; }
+        .brightness-3 { background-color: #9a9a9a; }
+        .brightness-2 { background-color: #aaaaaa; }
+        .brightness-1 { background-color: #bbbbbb; } /* 中心 */
+
+        /* ボタンのスタイル */
+        button {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <h1 class="text-3xl font-bold mb-6">UFOシューター</h1>
+
+    <div class="flex flex-col md:flex-row items-start gap-8 w-full max-w-4xl">
+        <div class="flex-grow flex flex-col items-center">
+            <div id="monitor" class="monitor-grid mb-4">
+                </div>
+            <p class="text-lg">方向キー: 移動 / スペースキー: 破壊</p>
+        </div>
+
+        <div class="w-full md:w-64 bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-semibold mb-4">情報</h2>
+            <div class="mb-4">
+                <p>スコア: <span id="score" class="font-bold text-yellow-400">0</span></p>
+            </div>
+            <div class="mb-4">
+                <p>残り時間: <span id="timer" class="font-bold text-red-500">30</span> 秒</p>
+            </div>
+            <button id="startButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg mb-6">
+                スタート
+            </button>
+
+            <h3 class="text-lg font-semibold mb-3">UFOの種類とポイント</h3>
+            <ul id="ufoLegend" class="space-y-2 ufo-legend text-sm">
+                </ul>
+        </div>
+    </div>
+
+    <div id="gameOverOverlay" class="game-over-overlay hidden">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl max-w-md w-full">
+            <h2 id="gameOverTitle" class="text-3xl md:text-4xl font-bold mb-4">ゲームオーバー！</h2>
+            <p id="finalScore" class="text-xl md:text-2xl mb-4">最終スコア: 0</p>
+            <div id="destroyedCountsDisplay" class="text-base md:text-lg mb-6 space-y-1 text-left px-4">
+                <h3 class="text-lg md:text-xl font-semibold mb-2 text-center">破壊したUFO:</h3>
+                </div>
+            <button id="restartButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg mt-2">
+                もう一度プレイ
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 定数 ---
+        const MONITOR_SIZE = 5; // モニターのサイズ (5x5)
+        const WORLD_WIDTH = 25; // ワールドの幅
+        const WORLD_HEIGHT = 25; // ワールドの高さ
+        const GAME_DURATION = 30; // ゲーム時間 (秒)
+        const INITIAL_UFO_COUNT = 15; // 初期UFO数
+        const UFO_TYPES = [ // UFOの種類とポイント
+            { type: '🛸', points: 10, emoji: '🛸' }, // 標準UFO
+            { type: '👾', points: 20, emoji: '👾' }, // エイリアン
+            { type: '👽', points: 30, emoji: '👽' }, // グレイ
+            { type: '🚀', points: 5, emoji: '🚀' }   // 高速ロケット (ポイント低め)
+        ];
+
+        // --- DOM要素 ---
+        const monitorGrid = document.getElementById('monitor');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const startButton = document.getElementById('startButton');
+        const ufoLegend = document.getElementById('ufoLegend');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const destroyedCountsDisplay = document.getElementById('destroyedCountsDisplay'); // 破壊数表示用Div
+        const restartButton = document.getElementById('restartButton');
+
+        // --- ゲーム状態 ---
+        let score = 0;
+        let timeLeft = GAME_DURATION;
+        let gameInterval = null;
+        let gameActive = false;
+        let monitorView = { x: Math.floor(WORLD_WIDTH / 2) - Math.floor(MONITOR_SIZE / 2), y: Math.floor(WORLD_HEIGHT / 2) - Math.floor(MONITOR_SIZE / 2) }; // モニター左上のワールド座標
+        let ufos = []; // { x, y, typeInfo }
+        let monitorCells = []; // モニターのDOM要素を保持
+        let destroyedUfoCounts = {}; // 破壊したUFOの数を種類別に記録 { '🛸': 0, ... }
+
+        // --- サウンド ---
+        let moveSynth, explosionSynth;
+        // Tone.jsの初期化はユーザー操作後に行うのが推奨されるため、スタートボタン内で行う
+        function initAudio() {
+            if ((moveSynth && explosionSynth) || typeof Tone === 'undefined') return;
+            try {
+                 if (!moveSynth) {
+                    moveSynth = new Tone.Synth({
+                        oscillator: { type: 'square' },
+                        envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+                    }).toDestination();
+                 }
+                 if (!explosionSynth) {
+                    explosionSynth = new Tone.NoiseSynth({
+                        noise: { type: 'white' },
+                        envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.2 }
+                    }).toDestination();
+                 }
+            } catch (error) {
+                console.error("Audio initialization failed:", error);
+                moveSynth = null; explosionSynth = null;
+            }
+        }
+
+        function playMoveSound() {
+            if (moveSynth && Tone.context.state === 'running') {
+                try { moveSynth.triggerAttackRelease('C5', '16n', Tone.now()); }
+                catch (error) { console.warn("playMoveSound error:", error.message); }
+            }
+        }
+
+        function playExplosionSound() {
+            if (explosionSynth && Tone.context.state === 'running') {
+                 try { explosionSynth.triggerAttackRelease('0.2n', Tone.now()); }
+                 catch (error) { console.warn("playExplosionSound error:", error.message); }
+            }
+        }
+
+        // --- ワールドの中心 ---
+        const worldCenterX = Math.floor(WORLD_WIDTH / 2);
+        const worldCenterY = Math.floor(WORLD_HEIGHT / 2);
+        const maxDist = Math.sqrt(worldCenterX**2 + worldCenterY**2);
+
+        // --- 関数 ---
+
+        function getBrightnessClass(worldX, worldY) {
+            const dist = Math.sqrt((worldX - worldCenterX)**2 + (worldY - worldCenterY)**2);
+            const normalizedDist = maxDist > 0 ? dist / maxDist : 0;
+            const brightnessLevel = Math.max(1, Math.min(10, 1 + Math.floor(normalizedDist * 9)));
+            return `brightness-${11 - brightnessLevel}`;
+        }
+
+        function createMonitorGrid() {
+            monitorGrid.innerHTML = '';
+            monitorCells = [];
+            const centerIndex = Math.floor(MONITOR_SIZE / 2);
+            for (let r = 0; r < MONITOR_SIZE; r++) {
+                monitorCells[r] = [];
+                for (let c = 0; c < MONITOR_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('monitor-cell');
+                    cell.dataset.row = r; cell.dataset.col = c;
+                    if (r === centerIndex && c === centerIndex) {
+                        cell.classList.add('center-cell');
+                    }
+                    monitorGrid.appendChild(cell);
+                    monitorCells[r][c] = cell;
+                }
+            }
+        }
+
+        function displayUfoLegend() {
+            ufoLegend.innerHTML = '';
+            UFO_TYPES.forEach(ufo => {
+                const li = document.createElement('li');
+                li.classList.add('flex', 'items-center');
+                li.innerHTML = `<span class="text-2xl mr-2">${ufo.emoji}</span> ${ufo.points} ポイント`;
+                ufoLegend.appendChild(li);
+            });
+        }
+
+        function spawnUfo() {
+            if (ufos.length >= INITIAL_UFO_COUNT * 2) return;
+            const typeInfo = UFO_TYPES[Math.floor(Math.random() * UFO_TYPES.length)];
+            const centerOffset = Math.floor(MONITOR_SIZE / 2);
+            const minSpawnX = centerOffset;
+            const maxSpawnX = WORLD_WIDTH - 1 - centerOffset;
+            const minSpawnY = centerOffset;
+            const maxSpawnY = WORLD_HEIGHT - 1 - centerOffset;
+            if (minSpawnX > maxSpawnX || minSpawnY > maxSpawnY) return;
+
+            let x, y, occupied;
+            let attempts = 0; const maxAttempts = 50;
+            do {
+                x = Math.floor(Math.random() * (maxSpawnX - minSpawnX + 1)) + minSpawnX;
+                y = Math.floor(Math.random() * (maxSpawnY - minSpawnY + 1)) + minSpawnY;
+                occupied = ufos.some(ufo => ufo.x === x && ufo.y === y);
+                attempts++;
+            } while (occupied && attempts < maxAttempts);
+
+            if (!occupied) { ufos.push({ x, y, typeInfo }); }
+            else { console.warn("Could not find empty spot for UFO."); }
+        }
+
+        function spawnInitialUfos() {
+            ufos = [];
+            for (let i = 0; i < INITIAL_UFO_COUNT; i++) { spawnUfo(); }
+        }
+
+        function updateMonitor() {
+            if (!monitorCells.length) return;
+            const centerRow = Math.floor(MONITOR_SIZE / 2);
+            const centerCol = Math.floor(MONITOR_SIZE / 2);
+
+            for (let r = 0; r < MONITOR_SIZE; r++) {
+                for (let c = 0; c < MONITOR_SIZE; c++) {
+                    if (!monitorCells[r] || !monitorCells[r][c]) continue;
+                    const cell = monitorCells[r][c];
+                    const worldX = monitorView.x + c;
+                    const worldY = monitorView.y + r;
+
+                    const brightnessClass = getBrightnessClass(worldX, worldY);
+                    let needsUpdate = true;
+                    for (const className of cell.classList) {
+                        if (className.startsWith('brightness-')) {
+                            if (className === brightnessClass) { needsUpdate = false; }
+                            else { cell.classList.remove(className); }
+                            break;
+                        }
+                    }
+                    if (needsUpdate) { cell.classList.add(brightnessClass); }
+
+                    const isCenter = (r === centerRow && c === centerCol);
+                    if (isCenter) { if (!cell.classList.contains('center-cell')) cell.classList.add('center-cell'); }
+                    else { if (cell.classList.contains('center-cell')) cell.classList.remove('center-cell'); }
+
+                    const ufo = ufos.find(u => u.x === worldX && u.y === worldY);
+                    const currentContent = cell.textContent;
+                    const newContent = ufo ? ufo.typeInfo.emoji : '';
+                    if (currentContent !== newContent) { cell.textContent = newContent; }
+                }
+            }
+        }
+
+        function movePlayer(dx, dy) {
+            if (!gameActive) return;
+            const originalX = monitorView.x; const originalY = monitorView.y;
+            const newX = monitorView.x + dx; const newY = monitorView.y + dy;
+            const minX = 0; const maxX = WORLD_WIDTH - MONITOR_SIZE;
+            const minY = 0; const maxY = WORLD_HEIGHT - MONITOR_SIZE;
+            let moved = false;
+
+            if (dx !== 0 && newX >= minX && newX <= maxX) {
+                monitorView.x = newX;
+                if (originalX !== monitorView.x) { moved = true; }
+            }
+            if (dy !== 0 && newY >= minY && newY <= maxY) {
+                monitorView.y = newY;
+                if (originalY !== monitorView.y) { moved = true; }
+            }
+            if (moved) { playMoveSound(); updateMonitor(); }
+        }
+
+        function shootUfo() {
+            if (!gameActive) return;
+            const centerRow = Math.floor(MONITOR_SIZE / 2);
+            const centerCol = Math.floor(MONITOR_SIZE / 2);
+            const targetWorldX = monitorView.x + centerCol;
+            const targetWorldY = monitorView.y + centerRow;
+            const targetIndex = ufos.findIndex(ufo => ufo.x === targetWorldX && ufo.y === targetWorldY);
+
+            if (targetIndex !== -1) {
+                const destroyedUfo = ufos[targetIndex];
+                score += destroyedUfo.typeInfo.points;
+                scoreDisplay.textContent = score;
+
+                // --- 破壊数をカウント ---
+                const destroyedType = destroyedUfo.typeInfo.emoji;
+                if (destroyedUfoCounts[destroyedType] !== undefined) {
+                    destroyedUfoCounts[destroyedType]++;
+                }
+                // --- ここまで追加 ---
+
+                ufos.splice(targetIndex, 1);
+                playExplosionSound();
+                spawnUfo();
+                updateMonitor();
+            }
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timerDisplay.textContent = timeLeft;
+            if (timeLeft <= 0) { endGame(); }
+        }
+
+        function startGame() {
+            if (gameActive) return;
+
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                 Tone.start().then(() => { initAudio(); }).catch(e => console.error("AudioContext start failed:", e));
+            } else { initAudio(); }
+
+            score = 0;
+            timeLeft = GAME_DURATION;
+            gameActive = true;
+            monitorView = { x: Math.floor(WORLD_WIDTH / 2) - Math.floor(MONITOR_SIZE / 2), y: Math.floor(WORLD_HEIGHT / 2) - Math.floor(MONITOR_SIZE / 2) };
+
+            // --- 破壊数カウントをリセット ---
+            destroyedUfoCounts = {};
+            UFO_TYPES.forEach(ufo => {
+                destroyedUfoCounts[ufo.emoji] = 0; // 各タイプを0で初期化
+            });
+            // --- ここまで追加 ---
+
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft;
+            startButton.disabled = true;
+            startButton.textContent = "プレイ中...";
+            startButton.classList.add('opacity-50', 'cursor-not-allowed');
+            gameOverOverlay.classList.add('hidden');
+
+            spawnInitialUfos();
+            updateMonitor();
+
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(updateTimer, 1000);
+
+            document.removeEventListener('keydown', handleKeyDown);
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameInterval); gameInterval = null;
+            startButton.disabled = false;
+            startButton.textContent = "スタート";
+            startButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            document.removeEventListener('keydown', handleKeyDown);
+
+            // --- ゲームオーバー画面に破壊数を表示 ---
+            destroyedCountsDisplay.innerHTML = ''; // 前回の内容をクリア
+            destroyedCountsDisplay.innerHTML = '<h3 class="text-lg md:text-xl font-semibold mb-2 text-center">破壊したUFO:</h3>'; // 見出しを追加
+
+            let hasDestroyedAny = false; // 何か破壊したかどうかのフラグ
+            // UFO_TYPESの順番で表示するためにループを変更
+            UFO_TYPES.forEach(ufoType => {
+                 const emoji = ufoType.emoji;
+                 const count = destroyedUfoCounts[emoji];
+                 if (count > 0) {
+                     const p = document.createElement('p');
+                     // 絵文字と数を表示 (例: 🛸 x 5)
+                     p.innerHTML = `<span class="inline-block w-6 text-center">${emoji}</span> x ${count}`; // 絵文字の幅を揃える
+                     destroyedCountsDisplay.appendChild(p);
+                     hasDestroyedAny = true;
+                 }
+            });
+
+            // 1つも破壊しなかった場合のメッセージ
+            if (!hasDestroyedAny) {
+                 const p = document.createElement('p');
+                 p.textContent = 'なし';
+                 p.classList.add('text-center', 'italic'); // 中央寄せ、イタリック
+                 // 見出しの下に追加
+                 destroyedCountsDisplay.appendChild(p);
+            }
+            // --- ここまで追加 ---
+
+            finalScoreDisplay.textContent = `最終スコア: ${score}`;
+            gameOverOverlay.classList.remove('hidden');
+        }
+
+        function handleKeyDown(event) {
+            if (!gameActive || event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+            let interaction = false; // 移動または射撃が行われたか
+            switch (event.key) {
+                case 'ArrowUp': case 'w': movePlayer(0, -1); interaction = true; break;
+                case 'ArrowDown': case 's': movePlayer(0, 1); interaction = true; break;
+                case 'ArrowLeft': case 'a': movePlayer(-1, 0); interaction = true; break;
+                case 'ArrowRight': case 'd': movePlayer(1, 0); interaction = true; break;
+                case ' ': shootUfo(); interaction = true; break;
+            }
+            if (interaction) { event.preventDefault(); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            createMonitorGrid();
+            displayUfoLegend();
+            updateMonitor();
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', () => {
+                 gameOverOverlay.classList.add('hidden');
+                 setTimeout(startGame, 100);
+            });
+        });
+    </script>
+
+</body>
+</html>

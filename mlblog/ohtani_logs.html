@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>選手成績ゲームログ</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="logs.js"></script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4; /* サンプルサイトに合わせた背景色 */
+            padding-bottom: 60px; /* Back to Topボタンのスペースを確保 */
+        }
+        .container {
+            max-width: 800px; /* コンテナの最大幅 */
+            margin: 0 auto; /* 中央寄せ */
+            background-color: #fff; /* コンテナの背景色 */
+            padding: 20px; /* 内側の余白 */
+            border-radius: 8px; /* 角丸 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 影 */
+        }
+        h1 {
+            text-align: center; /* 中央寄せ */
+            color: #333; /* 文字色 */
+            margin-bottom: 20px; /* 下の余白 */
+        }
+        /* 年ごとの見出しのスタイル */
+        h2 {
+            margin-top: 30px; /* 上の余白 */
+            color: #555; /* 文字色 */
+            border-bottom: 2px solid #eee; /* 下線 */
+            padding-bottom: 5px; /* 下線と文字の間隔 */
+        }
+        /* テーブルのスタイル */
+        table {
+            width: 100%; /* 幅いっぱい */
+            border-collapse: collapse; /* 境界線を重ねる */
+            margin-top: 10px; /* 上の余白 */
+            margin-bottom: 20px; /* 下の余白 */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* 影 */
+        }
+        th, td {
+            padding: 10px; /* セルの内側の余白 */
+            text-align: left; /* 左寄せ */
+            border-bottom: 1px solid #ddd; /* 下線 */
+        }
+        th {
+            background-color: #f2f2f2; /* ヘッダーの背景色 */
+            font-weight: bold; /* 太字 */
+        }
+        tr:hover {
+            background-color: #f9f9f9; /* ホバー時の背景色 */
+        }
+        /* ローディング・エラーメッセージのスタイル */
+        .loading {
+            text-align: center;
+            font-size: 1.2em;
+            color: #555;
+        }
+        .error {
+            color: red;
+            text-align: center;
+        }
+
+        /* ナビゲーションメニューのスタイル */
+        .year-nav {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .year-nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+        .year-nav a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        /* Back to Topボタンのスタイル */
+        #back-to-top {
+            display: none; /* デフォルトは非表示 */
+            position: fixed; /* 画面に固定 */
+            bottom: 20px; /* 下から20px */
+            right: 20px; /* 右から20px */
+            z-index: 99; /* 他の要素より前面に */
+            border: none;
+            outline: none;
+            background-color: #007bff; /* 背景色 */
+            color: white; /* 文字色 */
+            cursor: pointer; /* カーソルをポインターに */
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 16px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease;
+        }
+        #back-to-top:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="page-title">選手成績ゲームログ</h1>
+
+        <nav class="year-nav" id="year-navigation">
+            </nav>
+
+        <div id="loading" class="loading">データを読み込み中...</div>
+        <div id="error" class="error" style="display: none;">データの読み込みに失敗しました。</div>
+        <div id="tables-container">
+            </div>
+    </div>
+
+    <button onclick="topFunction()" id="back-to-top" title="Go to top">Back to Top</button>
+
+    <script>
+        // firebaseConfig は logs.js から読み込まれます
+
+        // Firebase アプリを初期化
+        // logs.js で firebaseConfig がグローバルスコープに定義されている必要があります
+        if (typeof firebaseConfig !== 'undefined') {
+             firebase.initializeApp(firebaseConfig);
+        } else {
+             console.error("firebaseConfig is not defined. Make sure logs.js is loaded correctly and defines firebaseConfig.");
+             document.getElementById('error').innerText = "Firebase設定が読み込めませんでした。logs.jsを確認してください。";
+             document.getElementById('error').style.display = 'block';
+             document.getElementById('loading').style.display = 'none';
+        }
+
+
+        // Firestore インスタンスを取得
+        // firebaseConfig が読み込まれていない場合は、db オブジェクトは作成されません
+        const db = typeof firebaseConfig !== 'undefined' ? firebase.firestore() : null;
+
+
+        // 表示したい選手名と年を指定
+        const playerName = "Shohei_Ohtani"; // 選手名 (アンダースコア区切り)
+        const targetYears = [2023, 2024, 2025]; // 表示したい年の配列
+
+        // ページタイトルを更新
+        document.getElementById('page-title').innerText = `${playerName.replace('_', ' ')} シーズンゲームログ`;
+
+
+        // Firestore からデータを取得して表示する関数
+        async function fetchAndDisplayGameLogs() {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const tablesContainer = document.getElementById('tables-container');
+            const navElement = document.getElementById('year-navigation');
+
+            loadingElement.style.display = 'block';
+            errorElement.style.display = 'none';
+            tablesContainer.innerHTML = ''; // コンテナの内容をクリア
+            navElement.innerHTML = ''; // ナビゲーションメニューの内容をクリア
+
+            // db オブジェクトが正しく作成されているか確認
+            if (!db) {
+                loadingElement.style.display = 'none';
+                errorElement.style.display = 'block';
+                errorElement.innerText = "Firestoreに接続できません。Firebase設定を確認してください。";
+                return; // 処理を中断
+            }
+
+
+            let hasData = false; // データが見つかったかどうかのフラグ
+
+            try {
+                // 各年のコレクションからデータを取得し、それぞれの表を作成
+                for (const year of targetYears) {
+                    // コレクション名にアンダースコアを使用
+                    const collectionName = `${playerName}_${year}`;
+                    // 日付でソートして取得
+                    const snapshot = await db.collection(collectionName).orderBy("date", "asc").get();
+
+                    if (!snapshot.empty) {
+                        hasData = true; // データが見つかった
+
+                        // 年ごとの見出しを作成し、IDを設定
+                        const yearHeading = document.createElement('h2');
+                        yearHeading.textContent = `${year}年`;
+                        yearHeading.id = `year-${year}`; // ジャンプ用のIDを設定
+                        tablesContainer.appendChild(yearHeading);
+
+                        // 年ごとのテーブルを作成
+                        const table = document.createElement('table');
+                        table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>日付</th>
+                                    <th>HR</th>
+                                    <th>AVG</th>
+                                    <th>OPS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        `;
+                        const tableBody = table.querySelector('tbody');
+
+                        // データをテーブルに挿入
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            const row = tableBody.insertRow();
+
+                            const dateCell = row.insertCell(0);
+                            dateCell.textContent = data.date;
+
+                            const hrCell = row.insertCell(1);
+                            hrCell.textContent = data.hr;
+
+                            const avgCell = row.insertCell(2);
+                            avgCell.textContent = data.avg;
+
+                            const opsCell = row.insertCell(3);
+                            opsCell.textContent = data.ops;
+                        });
+
+                        tablesContainer.appendChild(table); // テーブルをコンテナに追加
+
+                        // ナビゲーションリンクを作成
+                        const navLink = document.createElement('a');
+                        navLink.href = `#year-${year}`; // 見出しのIDへのリンク
+                        navLink.textContent = `${year}年`;
+                        navLink.addEventListener('click', function(event) {
+                            event.preventDefault(); // デフォルトのアンカーリンク動作を無効化
+                            document.querySelector(this.getAttribute('href')).scrollIntoView({
+                                behavior: 'smooth' // スムーズスクロール
+                            });
+                        });
+                        navElement.appendChild(navLink);
+                    }
+                }
+
+                if (!hasData) {
+                    loadingElement.innerText = "データが見つかりませんでした。";
+                } else {
+                    loadingElement.style.display = 'none'; // データがあればローディングを非表示
+                }
+
+
+            } catch (error) {
+                console.error("Error fetching documents: ", error);
+                loadingElement.style.display = 'none';
+                errorElement.style.display = 'block';
+                errorElement.innerText = `データの読み込み中にエラーが発生しました: ${error.message}`;
+            }
+        }
+
+        // ページ読み込み時にデータを取得して表示
+        // logs.js で firebaseConfig が定義されていることを前提に、DOMContentLoaded または window.onload で実行
+        // logs.js の読み込みが非同期である可能性も考慮し、firebaseConfig が利用可能かチェックしてから初期化・データ取得を行う
+        document.addEventListener('DOMContentLoaded', () => {
+            // firebaseConfig が logs.js で定義されていることを期待
+            if (typeof firebaseConfig !== 'undefined') {
+                // Firebase アプリは既に初期化済み（スクリプト上部）
+                fetchAndDisplayGameLogs(); // データ取得と表示を開始
+            } else {
+                 console.error("firebaseConfig is not defined after DOMContentLoaded. Make sure logs.js is loaded correctly and defines firebaseConfig.");
+                 document.getElementById('error').innerText = "Firebase設定が読み込めませんでした。logs.jsを確認してください。";
+                 document.getElementById('error').style.display = 'block';
+                 document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+
+        // Back to Topボタンの表示/非表示制御
+        const backToTopButton = document.getElementById("back-to-top");
+
+        window.onscroll = function() {scrollFunction()};
+
+        function scrollFunction() {
+          if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+            backToTopButton.style.display = "block";
+          } else {
+            backToTopButton.style.display = "none";
+          }
+        }
+
+        // ページトップへスムーズスクロールする関数
+        function topFunction() {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // スムーズスクロール
+          });
+        }
+
+    </script>
+</body>
+</html>
