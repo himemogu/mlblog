@@ -40,16 +40,13 @@ jobs:
       - name: Fetch HTML from GCF and save
         run: python fetch_and_save_html.py
 
-      # Firebase CLIをセットアップ
-      # FirebaseプロジェクトIDとサービスアカウントキーが必要です
-      - name: Setup Firebase CLI
-        uses: firebase/setup-firebase-cli@v2
+      # Firebase CLIをセットアップ（pocket-apps/action-setup-firebaseを使用）
+      - name: Setup Firebase CLI using Token
+        uses: pocket-apps/action-setup-firebase@v2
         with:
-          # FirebaseプロジェクトIDを指定
-          projectID: YOUR_FIREBASE_PROJECT_ID
-          # GitHub Secretsに保存したFirebaseサービスアカウントキーを指定
-          # 事前にGitHubリポジトリの設定でSecretsに FIREBASE_SERVICE_ACCOUNT_KEY という名前で登録してください
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          # GitHub Secretsに保存したFirebase CIトークンを指定
+          # 事前にGitHubリポジトリの設定でSecretsに FIREBASE_CI_TOKEN という名前で登録してください
+          firebase-token: ${{ secrets.FIREBASE_CI_TOKEN }}
 
       # Firebase Hostingにデプロイ
       # publicディレクトリ内のファイルがデプロイされます
