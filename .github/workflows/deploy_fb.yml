@@ -6,7 +6,7 @@ on:
   # スケジュール実行を設定 (例: 毎日 午前0時 UTC に実行)
   # cron形式で指定します。詳細はこちらを参照: https://crontab.guru/
   schedule:
-    cron: '0 6 * * *' # 毎日 UTC 6:00 (日本時間 15:00) に実行
+    - cron: '0 6 * * *' # 毎日 UTC 6:00 (日本時間 15:00) に実行
   # 手動実行も可能にする場合
   workflow_dispatch:
 
