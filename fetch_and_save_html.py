@@ -3,7 +3,7 @@ import os
 
 # GCFのHTTPトリガーURL
 # 実際のGCFデプロイ後に取得できるURLに置き換えてください
-GCF_URL = "https://us-central1-calendarapi-178400.cloudfunctions.net/handler"
+GCF_URL = "https://us-central1-sample-d6924.cloudfunctions.net/handler"
 
 # HTMLを保存するファイルのパス
 # Firebase Hostingの公開ディレクトリ内に配置します
