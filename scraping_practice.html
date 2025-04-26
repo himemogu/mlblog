@@ -3,75 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>スクレイピング練習用ニュースサイト</title>
+    <title>スクレイピング練習用商品リスト</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
             line-height: 1.6;
             margin: 20px;
-            background-color: #f4f4f4;
+            background-color: #f8f8f8;
             color: #333;
         }
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: auto;
             background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.08);
         }
-        h1, h2 {
+        h1, h2, h3 {
             color: #333;
         }
-        .site-title {
+        .site-header {
             text-align: center;
-            color: #0056b3;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 30px;
         }
-        .news-section {
+        .site-header h1 {
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        .practice-note {
+            background-color: #e9f7ef;
+            border-color: #d0eedc;
+            color: #0f5132;
+            padding: 12px;
+            margin-bottom: 25px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid;
+        }
+        .product-list-section h2 {
+            color: #0056b3;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .product-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+         .product-item:hover {
+            transform: translateY(-5px);
+        }
+        .product-item img {
+            max-width: 100%;
+            height: auto;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
+        }
+        .product-item h3.product-name {
+            font-size: 1em;
+            margin: 10px 0 5px 0;
+            min-height: 2.4em; /* 2行分の高さを確保 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .product-item .product-price {
+            font-size: 1.2em;
+            color: #dc3545;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .product-item p.product-description {
+            font-size: 0.8em;
+            color: #555;
+            margin-bottom: 15px;
+            min-height: 3.2em; /* 4行分の高さを確保 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .product-item a.product-link {
+            display: block;
+            background-color: #28a745;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        .product-item a.product-link:hover {
+            background-color: #218838;
+        }
+        /* 紛らわしい要素の例 */
+        .sidebar {
             margin-top: 30px;
-            border-top: 2px solid #eee;
+            border-top: 1px solid #eee;
             padding-top: 20px;
         }
-        .news-section h2 {
-             border-bottom: 2px solid #0056b3;
-             padding-bottom: 5px;
-             margin-bottom: 20px;
-        }
-        .news-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .news-item {
-            background-color: #e9e9e9;
-            border: 1px solid #ddd;
-            margin-bottom: 15px;
-            padding: 15px;
-            border-radius: 5px;
-        }
-        .news-item h3.article-title {
-            margin-top: 0;
-            margin-bottom: 5px;
-            color: #007bff;
-            font-size: 1.2em;
-        }
-        .news-item p {
-            margin-bottom: 10px;
-            font-size: 0.9em;
+        .sidebar h3 {
             color: #555;
         }
-        .news-item a.article-link {
-            display: inline-block;
-            background-color: #007bff;
-            color: white;
-            padding: 8px 15px;
+         .sidebar ul {
+            list-style: none;
+            padding: 0;
+         }
+         .sidebar li {
+            margin-bottom: 8px;
+         }
+         .sidebar a {
+            color: #007bff;
             text-decoration: none;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-        .news-item a.article-link:hover {
-            background-color: #0056b3;
-        }
+         }
+
         .footer {
             text-align: center;
             margin-top: 40px;
@@ -80,99 +137,117 @@
             font-size: 0.8em;
             color: #777;
         }
-        /* スクレピング練習用であることを示すスタイル */
-        .practice-note {
-            background-color: #fff3cd;
-            border-color: #ffecb5;
-            color: #664d03;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            text-align: center;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="practice-note">
-            これはスクレイピングの練習用サイトです。実際のWebサイトではありません。
-            このページの情報をスクレイピングする練習をしてみましょう！
+            これはスクレイピングの練習用サイトです。実際のECサイトではありません。
+            このページの商品の名前、価格、リンクをスクレイピングする練習をしてみましょう！
         </div>
 
-        <h1 class="site-title">AIと学ぶスクレイピング練習サイト</h1>
+        <header class="site-header">
+            <h1>AIと学ぶスクレイピング練習サイト - 商品リスト</h1>
+            <p>AIと一緒に、商品情報の自動収集に挑戦！</p>
+        </header>
 
-        <p>
-            ここでは、スクレイピングの基本を学ぶためのサンプルニュース記事を用意しています。
-            AIと一緒に、これらの記事の見出しとリンクを抜き出す練習をしてみましょう。
-        </p>
+        <div class="product-list-section">
+            <h2>おすすめ商品一覧</h2>
+            <div class="product-grid">
 
-        <div class="news-section">
-            <h2>最新ニュース</h2>
-            <ul class="news-list">
-                <li class="news-item">
-                    <h3 class="article-title">AI技術の最新動向</h3>
-                    <p>生成AIがビジネスにもたらす変化について解説します。</p>
-                    <a href="article1.html" class="article-link">続きを読む</a>
-                </li>
-                <li class="news-item">
-                    <h3 class="article-title">Python入門ガイド</h3>
-                    <p>プログラミング初心者向けにPythonの基本を優しく解説します。</p>
-                    <a href="article2.html" class="article-link">続きを読む</a>
-                </li>
-                <li class="news-item">
-                    <h3 class="article-title">効果的な学習方法とは？</h3>
-                    <p>新しいスキルを効率的に身につけるためのヒントをご紹介。</p>
-                    <a href="article3.html" class="article-link">続きを読む</a>
-                </li>
-                <li class="news-item">
-                    <h3 class="article-title">データ分析の第一歩</h3>
-                    <p>集めたデータを活用するための基本的な分析手法を学びましょう。</p>
-                    <a href="article4.html" class="article-link">続きを読む</a>
-                </li>
-                 <li class="news-item">
-                    <h3 class="article-title">スクレイピングの法的・倫理的注意点</h3>
-                    <p>知らずにトラブルにならないための大切なポイント。</p>
-                    <a href="article5.html" class="article-link">続きを読む</a>
-                </li>
-                <li class="news-item">
-                    <h3 class="article-title">Webサイトの仕組み：HTMLとCSS</h3>
-                    <p>スクレイピングに欠かせないWebサイトの基礎知識。</p>
-                    <a href="article6.html" class="article-link">続きを読む</a>
-                </li>
-                <li class="news-item">
-                    <h3 class="article-title">Requestsライブラリを使ってみよう</h3>
-                    <p>PythonでWebサイトにアクセスする基本的な方法。</p>
-                    <a href="article7.html" class="article-link">続きを読む</a>
-                </li>
-                <li class="news-item">
-                    <h3 class="article-title">Beautiful SoupでHTMLを解析</h3>
-                    <p>Webサイトの構造から欲しい情報を見つけ出す方法。</p>
-                    <a href="article8.html" class="article-link">続きを読む</a>
-                </li>
-                 <li class="news-item">
-                    <h3 class="article-title">AIとの対話でエラー解決！</h3>
-                    <p>コードで困ったときにAIに助けてもらう方法。</p>
-                    <a href="article9.html" class="article-link">続きを読む</a>
-                </li>
-                 <li class="news-item">
-                    <h3 class="article-title">次のステップへ：より高度なスクレイピング</h3>
-                    <p>ログインや動的なサイトへの対応はどうする？</p>
-                    <a href="article10.html" class="article-link">続きを読む</a>
-                </li>
-            </ul>
+                <div class="product-item">
+                    <img src="https://via.placeholder.com/200x150" alt="商品画像1">
+                    <h3 class="product-name">最新ワイヤレスイヤホン 高音質ノイズキャンセリング</h3>
+                    <span class="product-price">¥ 7,980</span>
+                    <p class="product-description">通勤・通学に最適！快適な装着感と迫力のサウンド。</p>
+                    <a href="product_detail_001.html" class="product-link">詳細を見る</a>
+                </div>
+
+                <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像2">
+                    <h3 class="product-name">多機能スマートウォッチ 健康管理サポート</h3>
+                    <span class="product-price">¥ 14,800</span>
+                    <p class="product-description">心拍数、睡眠トラッキング、通知機能搭載。毎日の健康を記録。</p>
+                    <a href="product_detail_002.html" class="product-link">詳細を見る</a>
+                </div>
+
+                <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像3">
+                    <h3 class="product-name">急速充電対応 モバイルバッテリー 10000mAh</h3>
+                    <span class="product-price">¥ 3,980</span>
+                    <p class="product-description">スマホ約2回分充電可能。コンパクトで持ち運びやすい。</p>
+                    <a href="product_detail_003.html" class="product-link">詳細を見る</a>
+                </div>
+
+                <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像4">
+                    <h3 class="product-name">高画質ウェブカメラ フルHD対応</h3>
+                    <span class="product-price">¥ 5,450</span>
+                    <p class="product-description">オンライン会議や配信に。クリアな映像と音声。</p>
+                    <a href="product_detail_004.html" class="product-link">詳細を見る</a>
+                </div>
+
+                <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像5">
+                    <h3 class="product-name">エルゴノミクスデザイン マウス</h3>
+                    <span class="product-price">¥ 2,999</span>
+                    <p class="product-description">手にフィットして長時間の作業でも疲れにくい。</p>
+                    <a href="product_detail_005.html" class="product-link">詳細を見る</a>
+                </div>
+
+                <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像6">
+                    <h3 class="product-name">メカニカルキーボード 静音タイプ</h3>
+                    <span class="product-price">¥ 9,800</span>
+                    <p class="product-description">カチャカチャ音が気にならない！タイピングが楽しくなる。</p>
+                    <a href="product_detail_006.html" class="product-link">詳細を見る</a>
+                </div>
+
+                 <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像7">
+                    <h3 class="product-name">大画面モバイルモニター 15.6インチ</h3>
+                    <span class="product-price">¥ 19,800</span>
+                    <p class="product-description">外出先での作業効率アップ。軽量で持ち運び便利。</p>
+                    <a href="product_detail_007.html" class="product-link">詳細を見る</a>
+                </div>
+
+                <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像8">
+                    <h3 class="product-name">USB-Cハブ 7-in-1ドッキングステーション</h3>
+                    <span class="product-price">¥ 6,500</span>
+                    <p class="product-description">ポート不足を解消！様々なデバイスを接続可能。</p>
+                    <a href="product_detail_008.html" class="product-link">詳細を見る</a>
+                </div>
+
+                <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像9">
+                    <h3 class="product-name">ポータブルSSD 1TB 高速データ転送</h3>
+                    <span class="product-price">¥ 11,500</span>
+                    <p class="product-description">写真や動画の保存に。コンパクトで頑丈。</p>
+                    <a href="product_detail_009.html" class="product-link">詳細を見る</a>
+                </div>
+
+                <div class="product-item">
+                     <img src="https://via.placeholder.com/200x150" alt="商品画像10">
+                    <h3 class="product-name">デスクライト 目に優しい調光機能付き</h3>
+                    <span class="product-price">¥ 4,200</span>
+                    <p class="product-description">長時間の読書や作業に最適。角度調整も簡単。</p>
+                    <a href="product_detail_010.html" class="product-link">詳細を見る</a>
+                </div>
+
+            </div> </div> <div class="sidebar">
+             <h3>人気のキーワード</h3>
+             <ul>
+                 <li><a href="#">イヤホン</a></li>
+                 <li><a href="#">スマートウォッチ</a></li>
+                 <li><a href="#">モバイルバッテリー</a></li>
+                 <li><a href="#">ウェブカメラ</a></li>
+             </ul>
         </div>
 
-        <div class="related-topics">
-             <h3>関連トピック</h3>
-             <p>プログラミング学習、データサイエンス、AI活用など。</p>
-             <a href="#">関連情報はこちら</a> </div>
-
-    </div>
-
-    <div class="footer">
+    </div> <div class="footer">
         <p>© 2023 Scraping Practice Site (Sample)</p>
-        <p>このページはスクレイピングの練習目的で作成された架空のページです。商用利用や再配布はご遠慮ください。</p>
+        <p>このページはスクレイピングの練習目的で作成された架空のページです。掲載されている情報に意味はありません。</p>
     </div>
 </body>
 </html>
