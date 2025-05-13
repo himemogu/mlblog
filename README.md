@@ -6,3 +6,4 @@ firebase deploy --only hosting
 ```
 
 https://gemini.google.com/app/de62ea5261c3b3f6?hl=ja
+
